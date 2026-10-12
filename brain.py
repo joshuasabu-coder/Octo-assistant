@@ -13,7 +13,7 @@ import re
 import requests
 
 import quick
-from actions import ACTIONS
+from actions import ACTIONS, LLM_BLOCKED
 
 # ---- Settings you may change ------------------------------------------------
 OLLAMA_URL = "http://localhost:11434/api/chat"
@@ -31,13 +31,16 @@ HISTORY_MESSAGES = 4
 # Words that suggest the owner wants HEX to DO something on the laptop.
 TASK_WORDS = re.compile(
     r"\b(open|launch|start|create|make|add|delete|remove|move|rename|copy|save|write|"
-    r"note|lock|list|show|run|folder|file|website|app|search|play|close|download)\b", re.I)
+    r"note|lock|list|show|run|folder|file|website|app|search|play|close|download|volume|"
+    r"brightness|mute|screenshot|battery|quit|exit)\b", re.I)
 
 PLAN_SYSTEM = """You are HEX, a voice assistant on the owner's laptop. Be brief. No markdown.
 Reply ONLY with JSON: {"say": "", "advice": "", "plan": null}
 - Tasks: plan = {"goal": "...", "steps": [{"action": "...", "args": {}, "explain": "one short sentence"}]}
-- Allowed actions: open_app(name), open_website(url), list_folder(path), create_folder(path),
-  write_note(path, text), move_file(src, dst), delete_file(path), lock_screen().
+- Allowed actions: open_app(name), close_app(name), open_website(url), list_folder(path),
+  create_folder(path), write_note(path, text), move_file(src, dst), delete_file(path),
+  lock_screen(), set_volume(level 0-100), set_brightness(level 0-100), screenshot(),
+  system_info(), running_apps().
   Paths look like ~/Desktop/Test or ~/Documents/notes.txt.
 - If it is only chat or a question, put a short answer in "say" and keep plan null.
 - If the owner is mistaken, add a short correction in "advice" but still plan the task.
@@ -95,7 +98,7 @@ def _clean_plan(plan):
         return None
     steps = []
     for s in plan.get("steps") or []:
-        if isinstance(s, dict) and s.get("action") in ACTIONS:
+        if isinstance(s, dict) and s.get("action") in ACTIONS and s.get("action") not in LLM_BLOCKED:
             s.setdefault("args", {})
             s.setdefault("explain", f"I will run {s['action']}.")
             steps.append(s)

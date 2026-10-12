@@ -27,7 +27,7 @@ from resemblyzer import VoiceEncoder, preprocess_wav
 
 import config
 import ui
-from actions import ACTIONS, DESTRUCTIVE
+from actions import ACTIONS, DESTRUCTIVE, confirm_text
 from brain import OLLAMA_MODEL, check_engine, think, warm_up
 from hex_voice import HexVoice
 
@@ -265,8 +265,7 @@ def run_plan(voice, ears, state, plan):
         voice.say(prefix + step["explain"])
         name = step["action"]
         if name in DESTRUCTIVE and not step.get("confirmed"):
-            if not ask_yes_no(voice, ears,
-                              f"This step changes or removes data. Shall I proceed with {name}?"):
+            if not ask_yes_no(voice, ears, confirm_text(name, step.get("args", {}))):
                 voice.say("Understood. I will not do that step.")
                 plan["done"] += 1
                 save_state(state)
