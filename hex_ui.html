@@ -70,28 +70,33 @@
   .talk p { color: var(--text); margin-bottom: 8px; word-break: break-word; }
 
   .center { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
-  .core-wrap { position: relative; width: min(46vh, 460px); aspect-ratio: 1; }
-  svg { width: 100%; height: 100%; overflow: visible; }
-  .spin1 { transform-origin: 200px 200px; animation: spin 40s linear infinite; }
-  .spin2 { transform-origin: 200px 200px; animation: spin 26s linear infinite reverse; }
-  body[data-mode="thinking"] .spin1, body[data-mode="transcribing"] .spin1 { animation-duration: 6s; }
-  body[data-mode="thinking"] .spin2, body[data-mode="transcribing"] .spin2 { animation-duration: 4s; }
-  body[data-mode="listening"] .spin1 { animation-duration: 14s; }
-  .core { transform-origin: 200px 200px; animation: pulse2 3s ease-in-out infinite; }
-  body[data-mode="speaking"] .core, body[data-mode="listening"] .core { animation-duration: 1.1s; }
-  .core-text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; letter-spacing: .2em; color: var(--accent); font-size: 15px; line-height: 1.5; text-shadow: 0 0 12px var(--accent); }
-  .core-text small { display: block; color: var(--dim); font-size: 10px; letter-spacing: .3em; }
-  #wave { display: flex; align-items: center; gap: 4px; height: 64px; margin-top: 26px; }
-  #wave i { width: 5px; height: 6px; background: var(--accent); box-shadow: 0 0 6px var(--accent); transition: height .08s; }
-  .pill { margin-top: 14px; border: 1px solid var(--line); border-radius: 24px; padding: 10px 26px; letter-spacing: .25em; color: var(--accent); background: rgba(8, 28, 38, .7); }
+  .core-wrap { position: relative; width: min(66vh, 680px); aspect-ratio: 1; }
+  #orb { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .core-text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; letter-spacing: .22em; color: #fff; font-size: 17px; line-height: 1.6; text-shadow: 0 0 14px var(--accent), 0 0 30px var(--accent); pointer-events: none; }
+  .core-text small { display: block; color: var(--accent); font-size: 10px; letter-spacing: .32em; text-shadow: 0 0 10px var(--accent); }
+  #wave { display: flex; align-items: center; gap: 4px; height: 56px; margin-top: 4px; }
+  #wave i { width: 5px; height: 6px; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: height .08s; border-radius: 2px; }
+  .pill { margin-top: 10px; border: 1px solid var(--accent); border-radius: 24px; padding: 10px 28px; letter-spacing: .25em; color: var(--accent); background: rgba(8, 28, 38, .7); box-shadow: 0 0 18px -4px var(--accent), inset 0 0 14px -8px var(--accent); }
+  #bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  header, main { position: relative; z-index: 1; }
+  .panel { box-shadow: 0 0 22px -10px var(--accent), inset 0 0 30px -22px var(--accent); background: linear-gradient(160deg, rgba(10, 40, 54, .62), rgba(4, 18, 26, .55)); overflow: hidden; }
+  .panel > * { position: relative; z-index: 1; }
+  .scan { position: absolute !important; left: 0; right: 0; top: -40%; height: 40%; background: linear-gradient(to bottom, transparent, rgba(25, 211, 243, .07), transparent); animation: scan 5s linear infinite; pointer-events: none; z-index: 0 !important; }
+  header { box-shadow: 0 6px 30px -18px var(--accent); }
+  .brand b { text-shadow: 0 0 14px var(--accent); }
+  .big { text-shadow: 0 0 12px currentColor; }
+  #spark { width: 100%; height: 46px; display: block; margin-top: 10px; }
+  .bar i { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes pulse { 50% { opacity: .35; } }
   @keyframes pulse2 { 50% { transform: scale(1.06); } }
+  @keyframes scan { to { top: 140%; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 </style>
 </head>
 <body data-mode="starting">
+<canvas id="bg"></canvas>
 <header>
   <div class="brand"><b>HEX</b><span>PERSONAL VOICE ASSISTANT</span></div>
   <div class="head-mid">
@@ -104,20 +109,21 @@
 
 <main>
   <section class="col">
-    <div class="panel">
+    <div class="panel"><div class="scan"></div>
       <div class="ptitle">VOICE LOCK <em>OWNER ONLY</em></div>
       <div class="big" id="auth">WAITING</div>
       <div class="bar" id="scorebar"><i id="scorefill" style="width:0"></i><u id="thr" style="left:75%"></u></div>
       <div class="row"><span>Last voice match</span><b id="score">--</b></div>
       <div class="small">Only the enrolled owner voice is obeyed. Other voices are rejected.</div>
     </div>
-    <div class="panel">
+    <div class="panel"><div class="scan"></div>
       <div class="ptitle">SYSTEM RESOURCES <em>LIVE</em></div>
       <div class="row"><span>CPU load</span><b id="cpu">--</b></div><div class="bar"><i id="cpub" style="width:0"></i></div>
       <div class="row"><span>Memory</span><b id="mem">--</b></div><div class="bar"><i id="memb" style="width:0"></i></div>
       <div class="row"><span>Storage</span><b id="disk">--</b></div><div class="bar"><i id="diskb" style="width:0"></i></div>
+      <canvas id="spark"></canvas>
     </div>
-    <div class="panel">
+    <div class="panel"><div class="scan"></div>
       <div class="ptitle">THINKING ENGINE <em id="model">--</em></div>
       <div class="big" id="eng">CHECKING</div>
       <div class="row"><span>Last answer took</span><b id="tsec">--</b></div>
@@ -128,22 +134,7 @@
 
   <section class="center">
     <div class="core-wrap">
-      <svg viewBox="0 0 400 400" aria-hidden="true">
-        <g class="spin1" fill="none" stroke="var(--accent)">
-          <circle cx="200" cy="200" r="190" stroke-opacity=".5" stroke-dasharray="4 7"/>
-          <path d="M200 10 a190 190 0 0 1 40 4" stroke-width="5" stroke-linecap="round"/>
-          <path d="M200 390 a190 190 0 0 1 -40 -4" stroke-width="5" stroke-linecap="round"/>
-        </g>
-        <g class="spin2" fill="none" stroke="var(--accent)" stroke-opacity=".6">
-          <circle cx="200" cy="200" r="160"/>
-          <circle cx="200" cy="200" r="118" stroke-dasharray="2 10"/>
-          <line x1="200" y1="40" x2="200" y2="360"/><line x1="61" y1="120" x2="339" y2="280"/><line x1="61" y1="280" x2="339" y2="120"/>
-        </g>
-        <g class="core">
-          <circle cx="200" cy="200" r="64" fill="rgba(8,28,38,.85)" stroke="var(--accent)" stroke-width="2"/>
-          <circle cx="200" cy="200" r="50" fill="none" stroke="var(--accent2)" stroke-dasharray="3 6"/>
-        </g>
-      </svg>
+      <canvas id="orb"></canvas>
       <div class="core-text"><span id="coremode">CORE</span><small id="coresub">ONLINE</small></div>
     </div>
     <div id="wave"></div>
@@ -151,7 +142,7 @@
   </section>
 
   <section class="col">
-    <div class="panel">
+    <div class="panel"><div class="scan"></div>
       <div class="ptitle">MODULES <em>STATUS</em></div>
       <div class="mods">
         <div><span>Ears (microphone)</span><b class="tag" id="m-ears">READY</b></div>
@@ -160,11 +151,11 @@
         <div><span>Owner lock</span><b class="tag" id="m-lock">ENGAGED</b></div>
       </div>
     </div>
-    <div class="panel grow">
+    <div class="panel grow"><div class="scan"></div>
       <div class="ptitle">ACTIVITY LOG <em>REAL TIME</em></div>
       <div id="log"></div>
     </div>
-    <div class="panel">
+    <div class="panel"><div class="scan"></div>
       <div class="ptitle">CONVERSATION <em>LAST EXCHANGE</em></div>
       <div class="talk"><p><b>YOU&gt;</b><span id="you">...</span></p><p><b>HEX&gt;</b><span id="hex">...</span></p></div>
     </div>
@@ -226,18 +217,150 @@
   setInterval(poll, 250); poll();
   setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString([], { hour12: false }); }, 500);
 
+  // ---------- shared helpers ----------
+  const TAU = Math.PI * 2;
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function fit(c) { const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1; c.width = Math.max(1, r.width * d); c.height = Math.max(1, r.height * d); c.getContext("2d").setTransform(d, 0, 0, d, 0, 0); return [r.width, r.height]; }
+  function parseHex(h) { h = h.trim().replace("#", ""); if (h.length === 3) h = h.split("").map(x => x + x).join(""); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  let col = [25, 211, 243];
+  function updateColour() {
+    const tgt = parseHex(getComputedStyle(document.body).getPropertyValue("--accent") || "#19d3f3");
+    for (let i = 0; i < 3; i++) col[i] += (tgt[i] - col[i]) * 0.06;
+  }
+  const rgba = a => `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},${a})`;
+
+  // ---------- history sparkline ----------
+  const cpuHist = []; const spark = $("spark"); let sW = 1, sH = 1;
+  function drawSpark() {
+    const c = spark.getContext("2d"); c.clearRect(0, 0, sW, sH);
+    if (cpuHist.length < 2) return;
+    c.beginPath();
+    cpuHist.forEach((v, i) => { const x = i / 59 * sW, y = sH - 3 - (v / 100) * (sH - 6); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.strokeStyle = rgba(0.95); c.lineWidth = 1.6; c.shadowColor = rgba(0.9); c.shadowBlur = 8; c.stroke();
+    c.shadowBlur = 0; c.lineTo(cpuHist.length / 59 * sW, sH); c.lineTo(0, sH); c.closePath();
+    const g = c.createLinearGradient(0, 0, 0, sH); g.addColorStop(0, rgba(0.25)); g.addColorStop(1, rgba(0));
+    c.fillStyle = g; c.fill();
+  }
+  setInterval(() => { const v = parseFloat($("cpu").textContent); if (!isNaN(v)) { cpuHist.push(v); if (cpuHist.length > 60) cpuHist.shift(); } }, 1000);
+
+  // ---------- background: drifting network ----------
+  const bg = $("bg"); let bW = 1, bH = 1; const nodes = [];
+  for (let i = 0; i < 70; i++) nodes.push({ x: Math.random(), y: Math.random(), vx: (Math.random() - .5) * 0.00025, vy: (Math.random() - .5) * 0.00025, r: Math.random() * 1.6 + .4 });
+  function drawBg() {
+    const c = bg.getContext("2d"); c.clearRect(0, 0, bW, bH);
+    for (const n of nodes) { n.x = (n.x + n.vx + 1) % 1; n.y = (n.y + n.vy + 1) % 1; }
+    c.lineWidth = 1;
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const dx = (nodes[i].x - nodes[j].x) * bW, dy = (nodes[i].y - nodes[j].y) * bH, d = Math.hypot(dx, dy);
+      if (d < 150) { c.strokeStyle = rgba(0.10 * (1 - d / 150)); c.beginPath(); c.moveTo(nodes[i].x * bW, nodes[i].y * bH); c.lineTo(nodes[j].x * bW, nodes[j].y * bH); c.stroke(); }
+    }
+    for (const n of nodes) { c.fillStyle = rgba(0.45); c.beginPath(); c.arc(n.x * bW, n.y * bH, n.r, 0, TAU); c.fill(); }
+  }
+
+  // ---------- the living core ----------
+  const orb = $("orb"); let oW = 1, oH = 1;
+  const parts = [];
+  for (let i = 0; i < 90; i++) parts.push({ a: Math.random() * TAU, r: 0.28 + Math.random() * 0.72, s: (Math.random() - .5) * 0.012, z: Math.random() * 1.8 + .4, ph: Math.random() * TAU });
+  let energy = 0.15, ang = 0, glyphs = [], glyphT = 0;
+  function newGlyphs() { glyphs = Array.from({ length: 10 }, () => Math.floor(Math.random() * 65535).toString(16).toUpperCase().padStart(4, "0")); }
+  newGlyphs();
+
+  function arc(c, cx, cy, r, a0, a1, w, alpha, blur) {
+    c.beginPath(); c.arc(cx, cy, r, a0, a1); c.lineWidth = w; c.strokeStyle = rgba(alpha); c.shadowColor = rgba(0.9); c.shadowBlur = blur || 0; c.stroke(); c.shadowBlur = 0;
+  }
+
+  function drawOrb() {
+    const c = orb.getContext("2d"), W = oW, H = oH, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 * 0.97;
+    c.clearRect(0, 0, W, H);
+    let target = 0.15, speed = 0.5;
+    if (mode === "listening") { target = Math.min(1, level * 14); speed = 1; }
+    else if (mode === "speaking") { target = 0.55 + 0.4 * Math.abs(Math.sin(t * 2.1) * Math.sin(t * 0.7 + 1)); speed = 1.3; }
+    else if (mode === "thinking" || mode === "transcribing" || mode === "verifying") { target = 0.5 + 0.2 * Math.sin(t * 3); speed = 3; }
+    else if (mode === "unauthorised" || mode === "error") { target = 0.8; speed = 2; }
+    energy += (target - energy) * 0.12;
+    if (!REDUCED) ang += speed * 0.008;
+
+    // halo
+    let g = c.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.05);
+    g.addColorStop(0, rgba(0.30 + 0.25 * energy)); g.addColorStop(0.45, rgba(0.08 + 0.05 * energy)); g.addColorStop(1, rgba(0));
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+    // outer dashed ring + tick ring
+    c.save(); c.translate(cx, cy); c.rotate(ang * 0.4); c.setLineDash([2, 9]); arc(c, 0, 0, R * 0.985, 0, TAU, 1.5, 0.5, 6); c.setLineDash([]); c.restore();
+    c.save(); c.translate(cx, cy); c.rotate(-ang * 0.6);
+    for (let i = 0; i < 180; i++) { const a = i / 180 * TAU, long = i % 5 === 0, r1 = R * 0.925, r2 = r1 + (long ? R * 0.035 : R * 0.018);
+      c.beginPath(); c.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); c.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); c.strokeStyle = rgba(long ? 0.85 : 0.4); c.lineWidth = long ? 1.6 : 1; c.stroke(); }
+    c.restore();
+
+    // thick rotating segments
+    c.save(); c.translate(cx, cy); c.rotate(ang * 1.2);
+    arc(c, 0, 0, R * 0.865, 0.1, 1.5, 7, 0.9, 14); arc(c, 0, 0, R * 0.865, 2.3, 3.3, 7, 0.9, 14); arc(c, 0, 0, R * 0.865, 4.0, 5.4, 7, 0.9, 14);
+    c.restore();
+    arc(c, cx, cy, R * 0.80, 0, TAU, 1.5, 0.55, 8);
+
+    // hex codes drifting around the ring
+    glyphT += 1; if (glyphT > 40) { glyphT = 0; newGlyphs(); }
+    c.save(); c.translate(cx, cy); c.rotate(-ang * 0.35); c.font = `${Math.max(9, R * 0.028)}px Consolas, monospace`; c.fillStyle = rgba(0.7); c.textAlign = "center";
+    glyphs.forEach((gl, i) => { const a = i / glyphs.length * TAU; c.save(); c.rotate(a); c.fillText(gl, 0, -R * 0.745); c.restore(); });
+    c.restore();
+
+    // counter-rotating star (two triangles)
+    c.save(); c.translate(cx, cy); c.rotate(-ang * 1.6);
+    for (let k = 0; k < 2; k++) { c.beginPath(); for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + k * Math.PI / 3 - Math.PI / 2; const x = Math.cos(a) * R * 0.66, y = Math.sin(a) * R * 0.66; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.closePath(); c.strokeStyle = rgba(0.45); c.lineWidth = 1.2; c.shadowColor = rgba(0.8); c.shadowBlur = 6; c.stroke(); c.shadowBlur = 0; }
+    c.restore();
+
+    // dotted ring
+    c.save(); c.translate(cx, cy); c.rotate(ang * 0.8);
+    for (let i = 0; i < 72; i++) { const a = i / 72 * TAU; c.beginPath(); c.arc(Math.cos(a) * R * 0.60, Math.sin(a) * R * 0.60, i % 6 === 0 ? 2.6 : 1.3, 0, TAU); c.fillStyle = rgba(i % 6 === 0 ? 0.95 : 0.5); c.fill(); }
+    c.restore();
+
+    // scanner sweep
+    for (let k = 0; k < 28; k++) { const a1 = ang * 2.4 - k * 0.025, a0 = a1 - 0.03; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R * 0.80, a0, a1 + 0.01); c.closePath(); c.fillStyle = rgba(0.16 * (1 - k / 28)); c.fill(); }
+
+    // voice-reactive spikes
+    c.save(); c.translate(cx, cy); c.lineWidth = 2.2; c.shadowColor = rgba(0.9); c.shadowBlur = 8; c.strokeStyle = rgba(0.95);
+    const N = 120, base = R * 0.455;
+    for (let i = 0; i < N; i++) { const a = i / N * TAU + ang * 0.1;
+      const wob = 0.5 + 0.5 * Math.sin(i * 0.9 + t * 3 + Math.sin(i * 0.31 + t) * 2);
+      const len = 3 + energy * R * 0.14 * (0.25 + wob) + (REDUCED ? 0 : Math.random() * energy * 4);
+      c.beginPath(); c.moveTo(Math.cos(a) * base, Math.sin(a) * base); c.lineTo(Math.cos(a) * (base + len), Math.sin(a) * (base + len)); c.stroke(); }
+    c.restore(); c.shadowBlur = 0;
+
+    // inner segmented ring
+    c.save(); c.translate(cx, cy); c.rotate(-ang * 2.6);
+    for (let i = 0; i < 6; i++) arc(c, 0, 0, R * 0.425, i * TAU / 6, i * TAU / 6 + 0.75, 4, 0.9, 10);
+    c.restore();
+
+    // glowing core sphere
+    const pr = R * 0.34 * (1 + 0.025 * Math.sin(t * 2.2) + energy * 0.09);
+    g = c.createRadialGradient(cx - pr * 0.25, cy - pr * 0.3, pr * 0.05, cx, cy, pr);
+    g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(0.25, rgba(0.9)); g.addColorStop(0.75, rgba(0.28)); g.addColorStop(1, rgba(0.05));
+    c.beginPath(); c.arc(cx, cy, pr, 0, TAU); c.fillStyle = g; c.shadowColor = rgba(1); c.shadowBlur = 40 + energy * 40; c.fill(); c.shadowBlur = 0;
+    arc(c, cx, cy, pr, 0, TAU, 2, 0.95, 16);
+    c.save(); c.translate(cx, cy); c.rotate(ang * 3); c.setLineDash([3, 7]); arc(c, 0, 0, pr * 0.8, 0, TAU, 1.2, 0.7, 0); c.setLineDash([]); c.restore();
+
+    // orbiting particles
+    for (const p of parts) { p.a += p.s * speed * (REDUCED ? 0 : 1); const r = R * (p.r + 0.02 * Math.sin(t + p.ph)); const x = cx + Math.cos(p.a) * r, y = cy + Math.sin(p.a) * r;
+      c.beginPath(); c.arc(x, y, p.z * (1 + energy * 0.6), 0, TAU); c.fillStyle = rgba(0.35 + 0.5 * Math.abs(Math.sin(t * 1.3 + p.ph))); c.shadowColor = rgba(1); c.shadowBlur = 8; c.fill(); c.shadowBlur = 0; }
+  }
+
+  // ---------- speech bars + main loop ----------
   function frame() {
-    t += 0.09;
+    t += 0.045; updateColour();
     bars.forEach((b, i) => {
       const mid = 1 - Math.abs(i - 15) / 17; let h;
-      if (mode === "listening") h = 6 + (Math.min(1, level * 14) * 56 * mid) * (0.55 + 0.45 * Math.random());
-      else if (mode === "speaking") h = 8 + 48 * mid * (0.35 + 0.65 * Math.abs(Math.sin(t * 2.3 + i * 0.7) * Math.random() + 0.2));
-      else if (mode === "thinking" || mode === "transcribing" || mode === "verifying") h = 6 + 40 * Math.max(0, Math.sin(t * 1.8 - i * 0.45));
-      else h = 6 + 5 * (1 + Math.sin(t * 0.7 + i * 0.5));
+      if (mode === "listening") h = 6 + (Math.min(1, level * 14) * 50 * mid) * (0.55 + 0.45 * Math.random());
+      else if (mode === "speaking") h = 8 + 42 * mid * (0.35 + 0.65 * Math.abs(Math.sin(t * 4.6) * Math.random() + 0.2));
+      else if (mode === "thinking" || mode === "transcribing" || mode === "verifying") h = 6 + 36 * Math.max(0, Math.sin(t * 3.6 - i * 0.45));
+      else h = 6 + 5 * (1 + Math.sin(t * 1.4 + i * 0.5));
       b.style.height = Math.max(4, h) + "px";
     });
+    drawBg(); drawOrb(); drawSpark();
     requestAnimationFrame(frame);
   }
+  function resize() { [oW, oH] = fit(orb); [bW, bH] = fit(bg); [sW, sH] = fit(spark); }
+  window.addEventListener("resize", resize); resize();
   frame();
 </script>
 </body>

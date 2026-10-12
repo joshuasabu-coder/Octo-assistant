@@ -32,7 +32,9 @@ except Exception:                      # not on Windows / not installed
 VOICE_DIR = Path(__file__).with_name("voices")
 PIPER_VOICE = "en_GB-alan-medium"   # calm British man.  Others: en_US-ryan-medium,
                                     # en_GB-northern_english_male-medium, en_US-joe-medium
-WARMTH = 0.10        # a little chest/body. 0 = none. Raise for a deeper, fuller voice
+WARMTH = 0.0         # chest/body boost. 0 = none. Raise (0.1) for a deeper, fuller voice
+BASS_CUT_HZ = 160    # removes low rumble so the voice is lighter. Raise to 200 for even less bass
+                     # (set to None to leave the voice exactly as Piper makes it)
 LOWPASS_HZ = None    # e.g. 9000 removes harsh hiss. None = leave it natural
 SAPI_RATE = 0        # Windows fallback voice speed, -10..+10
 # -----------------------------------------------------------------------------
@@ -49,6 +51,8 @@ def _finish(audio, sr, warmth=WARMTH, lowpass=LOWPASS_HZ):
     if audio.size < 200:
         raise ValueError("the speech audio was empty")
     out = audio
+    if BASS_CUT_HZ:
+        out = sosfilt(butter(2, BASS_CUT_HZ, btype="high", fs=sr, output="sos"), out)
     if warmth:
         low = sosfilt(butter(2, 250, btype="low", fs=sr, output="sos"), out)
         out = out + warmth * low.astype(np.float32)
@@ -160,7 +164,7 @@ class HexVoice:
             self.sapi_file.Speak(text)
             stream.Close()
             audio, sr = sf.read(path, dtype="float32")
-            sd.play(_finish(audio, sr, warmth=0.15, lowpass=9000), sr)
+            sd.play(_finish(audio, sr, warmth=0.0, lowpass=9000), sr)
             sd.wait()
         finally:
             if path and os.path.exists(path):
