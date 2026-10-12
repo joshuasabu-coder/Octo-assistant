@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HEX</title>
+<style>
+  :root {
+    --bg: #020b10; --panel: rgba(8, 28, 38, .55); --line: rgba(25, 211, 243, .28);
+    --text: #bfeaf5; --dim: #4f8da0; --accent: #19d3f3; --accent2: #0a7f96;
+    --warn: #ffb347; --bad: #ff5d6c; --good: #35e6a0;
+    --mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+  }
+  body[data-mode="thinking"], body[data-mode="transcribing"], body[data-mode="verifying"] { --accent: #ffb347; --accent2: #9a6416; }
+  body[data-mode="speaking"] { --accent: #35e6a0; --accent2: #17805a; }
+  body[data-mode="unauthorised"], body[data-mode="error"] { --accent: #ff5d6c; --accent2: #8f2430; }
+
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 40%, #06202b 0%, var(--bg) 62%);
+    color: var(--text); font-family: var(--mono); font-size: 13px;
+    display: grid; grid-template-rows: 64px 1fr; min-width: 1100px; overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; border-bottom: 1px solid var(--line); background: rgba(2, 14, 20, .7);
+  }
+  .brand b { display: block; font-size: 20px; letter-spacing: .5em; color: var(--accent); }
+  .brand span { font-size: 10px; letter-spacing: .25em; color: var(--dim); }
+  .head-mid { display: flex; gap: 48px; text-align: center; }
+  .head-mid small { display: block; font-size: 10px; letter-spacing: .2em; color: var(--dim); margin-bottom: 4px; }
+  .head-mid b { font-size: 14px; letter-spacing: .15em; color: var(--accent); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 8px; box-shadow: 0 0 10px var(--accent); animation: pulse 1.6s infinite; }
+  .owner { border: 1px solid var(--line); border-radius: 24px; padding: 8px 18px; letter-spacing: .2em; font-size: 12px; }
+
+  main { display: grid; grid-template-columns: 330px 1fr 350px; gap: 22px; padding: 22px 28px; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+  .panel {
+    position: relative; background: var(--panel); border: 1px solid var(--line);
+    padding: 16px 18px; backdrop-filter: blur(2px);
+  }
+  .panel::before, .panel::after { content: ""; position: absolute; width: 12px; height: 12px; border: 2px solid var(--accent); }
+  .panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  .ptitle { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .3em; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .ptitle em { font-style: normal; color: var(--dim); letter-spacing: .15em; font-size: 10px; }
+  .grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .row { display: flex; justify-content: space-between; margin: 10px 0 5px; color: var(--dim); }
+  .row b { color: var(--text); font-weight: 400; }
+  .bar { height: 5px; background: rgba(25, 211, 243, .12); position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: width .5s; }
+  .bar u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--warn); }
+  .big { font-size: 22px; letter-spacing: .12em; color: var(--accent); margin: 4px 0 6px; }
+  .big.ok { color: var(--good); } .big.bad { color: var(--bad); }
+  .small { font-size: 11px; color: var(--dim); line-height: 1.6; }
+
+  .mods div { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed rgba(25, 211, 243, .12); }
+  .mods div:last-child { border: 0; }
+  .mods span { color: var(--dim); }
+  .tag { font-size: 11px; letter-spacing: .1em; color: var(--good); }
+  .tag.bad { color: var(--bad); } .tag.wait { color: var(--warn); }
+
+  #log { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; font-size: 11.5px; }
+  #log div { color: var(--text); opacity: .9; } #log time { color: var(--dim); margin-right: 8px; }
+  #log .you { color: #9fe8ff; } #log .hex { color: var(--good); } #log .warn { color: var(--warn); }
+  .talk { border: 1px solid var(--line); padding: 12px 14px; line-height: 1.7; min-height: 120px; }
+  .talk b { color: var(--accent); font-weight: 400; margin-right: 6px; }
+  .talk p { color: var(--text); margin-bottom: 8px; word-break: break-word; }
+
+  .center { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
+  .core-wrap { position: relative; width: min(46vh, 460px); aspect-ratio: 1; }
+  svg { width: 100%; height: 100%; overflow: visible; }
+  .spin1 { transform-origin: 200px 200px; animation: spin 40s linear infinite; }
+  .spin2 { transform-origin: 200px 200px; animation: spin 26s linear infinite reverse; }
+  body[data-mode="thinking"] .spin1, body[data-mode="transcribing"] .spin1 { animation-duration: 6s; }
+  body[data-mode="thinking"] .spin2, body[data-mode="transcribing"] .spin2 { animation-duration: 4s; }
+  body[data-mode="listening"] .spin1 { animation-duration: 14s; }
+  .core { transform-origin: 200px 200px; animation: pulse2 3s ease-in-out infinite; }
+  body[data-mode="speaking"] .core, body[data-mode="listening"] .core { animation-duration: 1.1s; }
+  .core-text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; letter-spacing: .2em; color: var(--accent); font-size: 15px; line-height: 1.5; text-shadow: 0 0 12px var(--accent); }
+  .core-text small { display: block; color: var(--dim); font-size: 10px; letter-spacing: .3em; }
+  #wave { display: flex; align-items: center; gap: 4px; height: 64px; margin-top: 26px; }
+  #wave i { width: 5px; height: 6px; background: var(--accent); box-shadow: 0 0 6px var(--accent); transition: height .08s; }
+  .pill { margin-top: 14px; border: 1px solid var(--line); border-radius: 24px; padding: 10px 26px; letter-spacing: .25em; color: var(--accent); background: rgba(8, 28, 38, .7); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { opacity: .35; } }
+  @keyframes pulse2 { 50% { transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body data-mode="starting">
+<header>
+  <div class="brand"><b>HEX</b><span>PERSONAL VOICE ASSISTANT</span></div>
+  <div class="head-mid">
+    <div><small>SYSTEM STATUS</small><b><span class="dot"></span><span id="sys">STARTING</span></b></div>
+    <div><small>LOCAL TIME</small><b id="clock">--:--:--</b></div>
+    <div><small>UPTIME</small><b id="uptime">00:00</b></div>
+  </div>
+  <div class="owner" id="owner">MASTER</div>
+</header>
+
+<main>
+  <section class="col">
+    <div class="panel">
+      <div class="ptitle">VOICE LOCK <em>OWNER ONLY</em></div>
+      <div class="big" id="auth">WAITING</div>
+      <div class="bar" id="scorebar"><i id="scorefill" style="width:0"></i><u id="thr" style="left:75%"></u></div>
+      <div class="row"><span>Last voice match</span><b id="score">--</b></div>
+      <div class="small">Only the enrolled owner voice is obeyed. Other voices are rejected.</div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">SYSTEM RESOURCES <em>LIVE</em></div>
+      <div class="row"><span>CPU load</span><b id="cpu">--</b></div><div class="bar"><i id="cpub" style="width:0"></i></div>
+      <div class="row"><span>Memory</span><b id="mem">--</b></div><div class="bar"><i id="memb" style="width:0"></i></div>
+      <div class="row"><span>Storage</span><b id="disk">--</b></div><div class="bar"><i id="diskb" style="width:0"></i></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">THINKING ENGINE <em id="model">--</em></div>
+      <div class="big" id="eng">CHECKING</div>
+      <div class="row"><span>Last answer took</span><b id="tsec">--</b></div>
+      <div class="row"><span>Last route</span><b id="troute">--</b></div>
+      <div class="small" id="engmsg"></div>
+    </div>
+  </section>
+
+  <section class="center">
+    <div class="core-wrap">
+      <svg viewBox="0 0 400 400" aria-hidden="true">
+        <g class="spin1" fill="none" stroke="var(--accent)">
+          <circle cx="200" cy="200" r="190" stroke-opacity=".5" stroke-dasharray="4 7"/>
+          <path d="M200 10 a190 190 0 0 1 40 4" stroke-width="5" stroke-linecap="round"/>
+          <path d="M200 390 a190 190 0 0 1 -40 -4" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <g class="spin2" fill="none" stroke="var(--accent)" stroke-opacity=".6">
+          <circle cx="200" cy="200" r="160"/>
+          <circle cx="200" cy="200" r="118" stroke-dasharray="2 10"/>
+          <line x1="200" y1="40" x2="200" y2="360"/><line x1="61" y1="120" x2="339" y2="280"/><line x1="61" y1="280" x2="339" y2="120"/>
+        </g>
+        <g class="core">
+          <circle cx="200" cy="200" r="64" fill="rgba(8,28,38,.85)" stroke="var(--accent)" stroke-width="2"/>
+          <circle cx="200" cy="200" r="50" fill="none" stroke="var(--accent2)" stroke-dasharray="3 6"/>
+        </g>
+      </svg>
+      <div class="core-text"><span id="coremode">CORE</span><small id="coresub">ONLINE</small></div>
+    </div>
+    <div id="wave"></div>
+    <div class="pill" id="pill">STARTING UP...</div>
+  </section>
+
+  <section class="col">
+    <div class="panel">
+      <div class="ptitle">MODULES <em>STATUS</em></div>
+      <div class="mods">
+        <div><span>Ears (microphone)</span><b class="tag" id="m-ears">READY</b></div>
+        <div><span>Voice</span><b class="tag" id="m-voice">--</b></div>
+        <div><span>Brain (Ollama)</span><b class="tag wait" id="m-brain">CHECKING</b></div>
+        <div><span>Owner lock</span><b class="tag" id="m-lock">ENGAGED</b></div>
+      </div>
+    </div>
+    <div class="panel grow">
+      <div class="ptitle">ACTIVITY LOG <em>REAL TIME</em></div>
+      <div id="log"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">CONVERSATION <em>LAST EXCHANGE</em></div>
+      <div class="talk"><p><b>YOU&gt;</b><span id="you">...</span></p><p><b>HEX&gt;</b><span id="hex">...</span></p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const SYS = { starting: "STARTING", awaiting: "OPTIMAL", listening: "LISTENING", verifying: "WORKING", transcribing: "WORKING",
+                thinking: "WORKING", speaking: "SPEAKING", unauthorised: "ALERT", error: "ALERT" };
+  const CORE = { starting: ["CORE", "STARTING"], awaiting: ["CORE", "ACTIVE"], listening: ["LISTENING", "I HEAR YOU"], verifying: ["VERIFYING", "VOICE LOCK"],
+                 transcribing: ["UNDERSTANDING", "YOUR WORDS"], thinking: ["THINKING", "ONE MOMENT"], speaking: ["SPEAKING", "HEX"],
+                 unauthorised: ["DENIED", "UNAUTHORISED"], error: ["ATTENTION", "CHECK LOG"] };
+  const bars = []; const wave = $("wave");
+  for (let i = 0; i < 31; i++) { const b = document.createElement("i"); wave.appendChild(b); bars.push(b); }
+  let mode = "starting", level = 0, t = 0;
+
+  function bar(id, pct) { $(id).style.width = Math.max(0, Math.min(100, pct)) + "%"; }
+  function hms(s) { const m = Math.floor(s / 60), h = Math.floor(m / 60); return (h ? String(h).padStart(2, "0") + ":" : "") + String(m % 60).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+  function esc(s) { return String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+  function render(s) {
+    mode = s.mode; level = s.level; document.body.dataset.mode = s.mode;
+    $("pill").textContent = s.label; $("sys").textContent = SYS[s.mode] || "OPTIMAL";
+    const c = CORE[s.mode] || ["CORE", "ACTIVE"]; $("coremode").textContent = c[0]; $("coresub").textContent = c[1];
+    $("owner").textContent = s.owner_title; $("uptime").textContent = hms(s.uptime);
+
+    const a = $("auth");
+    a.className = "big " + (s.owner_status === "authorised" ? "ok" : s.owner_status === "unauthorised" ? "bad" : "");
+    a.textContent = s.owner_status === "authorised" ? "AUTHORISED" : s.owner_status === "unauthorised" ? "UNAUTHORISED" : "WAITING";
+    if (s.voice_score != null) { bar("scorefill", s.voice_score * 100); $("score").textContent = s.voice_score.toFixed(2) + " (needs " + (s.threshold ?? 0).toFixed(2) + ")"; }
+    if (s.threshold != null) $("thr").style.left = (s.threshold * 100) + "%";
+
+    const st = s.stats;
+    $("cpu").textContent = st.cpu + "%"; bar("cpub", st.cpu);
+    $("mem").textContent = st.mem_total_gb ? st.mem_used_gb + " / " + st.mem_total_gb + " GB" : st.mem_pct + "%"; bar("memb", st.mem_pct);
+    $("disk").textContent = st.disk_pct + "%"; bar("diskb", st.disk_pct);
+
+    $("model").textContent = (s.model || "--").toUpperCase();
+    const e = $("eng"), ok = s.engine.ok;
+    e.className = "big " + (ok === true ? "ok" : ok === false ? "bad" : "");
+    e.textContent = ok === true ? "READY" : ok === false ? "NOT READY" : "CHECKING";
+    $("engmsg").textContent = s.engine.msg || "";
+    $("tsec").textContent = s.think_seconds == null ? "--" : s.think_seconds.toFixed(1) + " s";
+    $("troute").textContent = s.think_route ? s.think_route.toUpperCase() : "--";
+
+    const mb = $("m-brain"); mb.textContent = ok === true ? "ONLINE" : ok === false ? "OFFLINE" : "CHECKING"; mb.className = "tag " + (ok === true ? "" : ok === false ? "bad" : "wait");
+    $("m-voice").textContent = s.voice_engine || "--";
+    const lock = $("m-lock"); lock.textContent = s.owner_status === "unauthorised" ? "REJECTED A VOICE" : "ENGAGED"; lock.className = "tag " + (s.owner_status === "unauthorised" ? "bad" : "");
+
+    $("you").textContent = s.you || "..."; $("hex").textContent = s.hex || "...";
+    $("log").innerHTML = s.log.slice(-9).map(l => `<div class="${l.kind}"><time>[${l.t}]</time>${esc(l.msg)}</div>`).join("");
+  }
+
+  async function poll() {
+    try { const r = await fetch("/api/state", { cache: "no-store" }); render(await r.json()); }
+    catch (e) { document.body.dataset.mode = "error"; $("pill").textContent = "HEX IS NOT RUNNING"; $("sys").textContent = "OFFLINE"; }
+  }
+  setInterval(poll, 250); poll();
+  setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString([], { hour12: false }); }, 500);
+
+  function frame() {
+    t += 0.09;
+    bars.forEach((b, i) => {
+      const mid = 1 - Math.abs(i - 15) / 17; let h;
+      if (mode === "listening") h = 6 + (Math.min(1, level * 14) * 56 * mid) * (0.55 + 0.45 * Math.random());
+      else if (mode === "speaking") h = 8 + 48 * mid * (0.35 + 0.65 * Math.abs(Math.sin(t * 2.3 + i * 0.7) * Math.random() + 0.2));
+      else if (mode === "thinking" || mode === "transcribing" || mode === "verifying") h = 6 + 40 * Math.max(0, Math.sin(t * 1.8 - i * 0.45));
+      else h = 6 + 5 * (1 + Math.sin(t * 0.7 + i * 0.5));
+      b.style.height = Math.max(4, h) + "px";
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+</script>
+</body>
+</html>

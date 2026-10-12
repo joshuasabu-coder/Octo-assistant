@@ -1,0 +1,6 @@
+anthropic
+faster-whisper
+resemblyzer
+sounddevice
+numpy
+pyttsx3
