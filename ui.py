@@ -43,12 +43,24 @@ _state = {
     "think_seconds": None, "think_route": None, "model": "",
     "voice_engine": "", "engine": {"ok": None, "msg": "checking..."},
     "stats": {"cpu": 0, "mem_pct": 0, "mem_used_gb": 0, "mem_total_gb": 0, "disk_pct": 0},
+    "alert": None, "popup": None,
     "log": [], "you": "", "hex": "", "owner_title": "MASTER", "started": time.time(),
 }
 _probe = None
 _url = None
 TOKEN = secrets.token_urlsafe(18)       # shown only to the page Octo itself serves
 _typed = queue.Queue()                  # messages typed into the HUD's type bar
+
+
+def alert(kind, text="", seconds=6):
+    """Full-screen warning over the whole interface (e.g. an unauthorised voice)."""
+    update(alert={"kind": kind, "text": text, "until": time.time() + seconds})
+
+
+def popup(title, detail="", seconds=3.5):
+    """A card that pops up over the sphere, e.g. 'OPENING / SETTINGS'."""
+    update(popup={"title": str(title)[:40], "detail": str(detail)[:60], "id": int(time.time() * 1000),
+                  "until": time.time() + seconds})
 
 
 def pop_typed():
@@ -150,6 +162,10 @@ class _Handler(BaseHTTPRequestHandler):
                 snap = dict(_state)
                 snap["log"] = list(_state["log"])
             snap["uptime"] = int(time.time() - snap.pop("started"))
+            now = time.time()
+            for key in ("alert", "popup"):                 # hide them once their time is up
+                v = snap.get(key)
+                snap[key] = None if (not v or v["until"] < now) else dict(v, ms_left=int((v["until"] - now) * 1000))
             self._send(200, json.dumps(snap).encode(), "application/json")
         elif self.path.startswith("/favicon"):
             self._send(204, b"", "image/x-icon")

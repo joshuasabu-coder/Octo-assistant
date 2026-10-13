@@ -28,7 +28,7 @@ from resemblyzer import VoiceEncoder, preprocess_wav
 
 import config
 import ui
-from actions import ACTIONS, DESTRUCTIVE, confirm_text
+from actions import ACTIONS, DESTRUCTIVE, confirm_text, describe
 from brain import OLLAMA_MODEL, check_engine, think, warm_up
 from hex_voice import HexVoice
 
@@ -150,6 +150,7 @@ class Ears:
         if score < thr:
             print(f"[OCTO] voice match {score:.2f} (needs {thr:.2f}) - not the owner")
             ui.update(owner_status="unauthorised")
+            ui.alert("unauthorised", f"VOICE MATCH {score:.2f}  /  NEEDS {thr:.2f}", 6)
             return "unauthorised", None
         ui.update(owner_status="authorised")
 
@@ -291,6 +292,7 @@ def run_plan(voice, ears, state, plan):
         searching = name == "open_website" and any(k in url for k in ("/search", "results?"))
         try:
             ui.log(f"Running {name}")
+            ui.popup(*describe(name, step.get("args", {})))
             if searching:                        # the HUD shows the 3D web network
                 qs = parse_qs(urlparse(url).query)
                 query = (qs.get("q") or qs.get("search_query") or [""])[0]

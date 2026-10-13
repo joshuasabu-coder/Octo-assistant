@@ -99,6 +99,36 @@
   #spark { width: 100%; height: 46px; display: block; margin-top: 10px; }
   .bar i { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
 
+  /* ---- full-screen ALARM (unauthorised voice) ---- */
+  #alarm { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; justify-content: space-between; align-items: center; pointer-events: none; overflow: hidden;
+           background: radial-gradient(ellipse at center, rgba(150, 0, 14, .90) 0%, rgba(60, 0, 6, .96) 70%, rgba(20, 0, 2, .98) 100%); }
+  body.alarm-on #alarm { display: flex; animation: alarmIn .25s ease-out, alarmFlash .8s ease-in-out infinite .25s; }
+  #alarm .stripes { width: 100%; height: 70px; flex: none; background: repeating-linear-gradient(-45deg, #ff1a2b 0 30px, #170002 30px 60px); background-size: 85px 85px; animation: stripes 1s linear infinite; box-shadow: 0 0 40px #ff1a2b; }
+  #alarm .mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 24px; min-height: 0; }
+  #alarm svg { height: min(40vh, 380px); filter: drop-shadow(0 0 28px #ff1a2b) drop-shadow(0 0 70px #ff1a2b); animation: alarmPulse .8s ease-in-out infinite; }
+  #alarm h1 { font: 900 clamp(44px, 10.5vw, 170px)/1 var(--mono); letter-spacing: .06em; color: #fff; margin-top: 2vh; text-shadow: 0 0 22px #ff1a2b, 0 0 60px #ff1a2b, 0 0 120px #ff1a2b; animation: alarmShake .35s linear infinite; }
+  #alarm h2 { font: 700 clamp(16px, 2.6vw, 38px) var(--mono); letter-spacing: .3em; color: #ffb3ba; margin-top: 2vh; }
+  #alarm p { font: 600 clamp(13px, 1.7vw, 24px) var(--mono); letter-spacing: .25em; color: #ff6b78; margin-top: 1.6vh; }
+
+  /* ---- pop-up card over the sphere (opening apps, settings, ...) ---- */
+  #popup { position: fixed; left: 50%; top: 46%; z-index: 500; min-width: 440px; max-width: 80vw; padding: 26px 40px 30px; text-align: center; pointer-events: none;
+           background: linear-gradient(160deg, rgba(8, 36, 50, .92), rgba(3, 14, 20, .94)); border: 1px solid var(--accent); backdrop-filter: blur(6px);
+           box-shadow: 0 0 60px -6px var(--accent), inset 0 0 40px -22px var(--accent);
+           opacity: 0; visibility: hidden; transform: translate(-50%, -50%) scale(.82); transition: opacity .35s, transform .35s, visibility .35s; }
+  #popup.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+  #popup::before, #popup::after { content: ""; position: absolute; width: 22px; height: 22px; border: 3px solid var(--accent); }
+  #popup::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; } #popup::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+  #popup small { display: block; font-size: 13px; letter-spacing: .5em; color: var(--accent); margin-bottom: 12px; }
+  #popup b { display: block; font-size: clamp(26px, 3.6vw, 52px); letter-spacing: .14em; color: #fff; font-weight: 700; text-shadow: 0 0 20px var(--accent); word-break: break-word; }
+  #popup .track { height: 4px; margin-top: 22px; background: rgba(25, 211, 243, .15); overflow: hidden; }
+  #popup .track i { display: block; height: 100%; width: 0; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  #popup.run .track i { animation: pfill 3.2s linear forwards; }
+  @keyframes pfill { to { width: 100%; } }
+  @keyframes stripes { to { background-position: 85px 0; } }
+  @keyframes alarmIn { from { transform: scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes alarmFlash { 50% { background-color: rgba(120, 0, 10, .35); } }
+  @keyframes alarmPulse { 50% { transform: scale(1.08); } }
+  @keyframes alarmShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes pulse { 50% { opacity: .35; } }
   @keyframes pulse2 { 50% { transform: scale(1.06); } }
@@ -179,6 +209,18 @@
   </section>
 </main>
 
+<div id="alarm" aria-live="assertive">
+  <div class="stripes"></div>
+  <div class="mid">
+    <svg viewBox="0 0 200 180" aria-hidden="true"><polygon points="100,10 192,170 8,170" fill="rgba(255,26,43,.22)" stroke="#ff1a2b" stroke-width="10" stroke-linejoin="round"/><rect x="91" y="60" width="18" height="66" rx="9" fill="#ff1a2b"/><circle cx="100" cy="146" r="11" fill="#ff1a2b"/></svg>
+    <h1>UNAUTHORISED</h1>
+    <h2>VOICE NOT RECOGNISED &nbsp;&bull;&nbsp; ACCESS DENIED</h2>
+    <p id="alarmSub"></p>
+  </div>
+  <div class="stripes"></div>
+</div>
+<div id="popup"><small id="puTitle">OPENING</small><b id="puDetail">...</b><div class="track"><i></i></div></div>
+
 <script>
   const $ = id => document.getElementById(id);
   const SYS = { starting: "STARTING", awaiting: "OPTIMAL", listening: "LISTENING", verifying: "WORKING", transcribing: "WORKING",
@@ -188,7 +230,7 @@
                  unauthorised: ["DENIED", "UNAUTHORISED"], error: ["ATTENTION", "CHECK LOG"] };
   const bars = []; const wave = $("wave");
   for (let i = 0; i < 31; i++) { const b = document.createElement("i"); wave.appendChild(b); bars.push(b); }
-  let mode = "starting", level = 0, t = 0, searching = false, searchQuery = "";
+  let lastPopup = null; let mode = "starting", level = 0, t = 0, searching = false, searchQuery = "";
 
   function bar(id, pct) { $(id).style.width = Math.max(0, Math.min(100, pct)) + "%"; }
   function hms(s) { const m = Math.floor(s / 60), h = Math.floor(m / 60); return (h ? String(h).padStart(2, "0") + ":" : "") + String(m % 60).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
@@ -225,6 +267,14 @@
     $("m-voice").textContent = s.voice_engine || "--";
     const lock = $("m-lock"); lock.textContent = s.owner_status === "unauthorised" ? "REJECTED A VOICE" : "ENGAGED"; lock.className = "tag " + (s.owner_status === "unauthorised" ? "bad" : "");
 
+    document.body.classList.toggle("alarm-on", !!s.alert);
+    if (s.alert) $("alarmSub").textContent = s.alert.text || "";
+    const pu = s.popup, box = $("popup");
+    if (pu) {
+      if (pu.id !== lastPopup) { lastPopup = pu.id; $("puTitle").textContent = pu.title; $("puDetail").textContent = pu.detail || "";
+        box.classList.remove("run"); void box.offsetWidth; box.classList.add("run"); }
+      box.classList.add("show");
+    } else { box.classList.remove("show", "run"); lastPopup = null; }
     $("you").textContent = s.you || "..."; $("hex").textContent = s.hex || "...";
     $("log").innerHTML = s.log.slice(-9).map(l => `<div class="${l.kind}"><time>[${l.t}]</time>${esc(l.msg)}</div>`).join("");
   }

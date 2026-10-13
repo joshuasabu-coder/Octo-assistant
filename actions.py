@@ -110,7 +110,19 @@ def _find_app(name):
     return None, None
 
 
+def _allow_foreground():
+    """Windows only lets the foreground program raise windows; a tap on Alt lets the
+    app Octo opens come to the front instead of hiding behind the Octo window."""
+    if IS_WIN:
+        try:
+            ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)
+            ctypes.windll.user32.keybd_event(0x12, 0, 2, 0)
+        except Exception:
+            pass
+
+
 def open_app(name):
+    _allow_foreground()
     n = name.lower().strip()
     if os.path.exists(name) or re.match(r"^[a-z\-]+:", n) or n.endswith(".exe"):
         if IS_WIN:
@@ -362,3 +374,42 @@ def confirm_text(name, args):
         "delete_file": "This will move a file to my recovery folder.",
         "move_file": "This will move a file.",
     }.get(name, "This step changes your laptop.") + " Shall I proceed?"
+
+
+def describe(name, args):
+    """(title, detail) for the card that pops up over Octo while a step runs."""
+    a = args or {}
+    try:
+        if name == "open_app":
+            n = str(a.get("name", "")).strip()
+            return "OPENING", (n + " SETTINGS" if n.lower() in SETTINGS_PAGES else n).upper()
+        if name == "open_website":
+            u = str(a.get("url", ""))
+            m = re.search(r"[?&](?:q|search_query)=([^&]+)", u)
+            if m:
+                from urllib.parse import unquote_plus
+                return "SEARCHING", unquote_plus(m.group(1)).upper()
+            return "OPENING", re.sub(r"^https?://(www\.)?", "", u).split("/")[0].upper()
+        if name == "close_app":
+            return "CLOSING", str(a.get("name", "")).upper()
+        if name == "set_volume":
+            return "VOLUME", f"{a.get('level')} PERCENT"
+        if name == "volume_change":
+            return "VOLUME", "UP" if a.get("direction") == "up" else "DOWN"
+        if name == "set_brightness":
+            return "BRIGHTNESS", f"{a.get('level')} PERCENT"
+        if name == "change_brightness":
+            return "BRIGHTNESS", "UP" if a.get("delta", 0) > 0 else "DOWN"
+        if name == "run_command":
+            return "RUNNING COMMAND", str(a.get("command", ""))[:40].upper()
+        if name in ("list_folder", "create_folder", "write_note", "move_file", "delete_file"):
+            p = a.get("path") or a.get("src") or ""
+            return name.replace("_", " ").upper(), Path(str(p)).name.upper()
+    except Exception:
+        pass
+    return {"screenshot": ("SCREENSHOT", "CAPTURING"), "lock_screen": ("LOCKING", "YOUR SCREEN"),
+            "mute_toggle": ("SOUND", "MUTE TOGGLE"), "media_key": ("MEDIA", "CONTROL"),
+            "system_info": ("SYSTEM CHECK", "READING STATUS"), "running_apps": ("OPEN APPS", "CHECKING"),
+            "shutdown_pc": ("SHUTTING DOWN", "IN 30 SECONDS"), "restart_pc": ("RESTARTING", "IN 30 SECONDS"),
+            "sleep_pc": ("SLEEP", "GOING TO SLEEP"), "cancel_shutdown": ("CANCELLED", "STAYING ON")
+            }.get(name, (name.replace("_", " ").upper(), ""))
