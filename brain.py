@@ -1,11 +1,11 @@
-"""HEX's reasoning, powered by Ollama (a free AI model running on this laptop).
+"""Octo's reasoning, powered by Ollama (a free AI model running on this laptop).
 
 Three speeds:
   1. Known commands and simple questions (quick.py)  -> instant, no AI model
   2. Chat and questions                              -> short plain-text answer
   3. Other tasks                                     -> the model writes a plan (slowest)
 
-Every AI call has a hard time limit, so HEX can never sit silent for minutes.
+Every AI call has a hard time limit, so Octo can never sit silent for minutes.
 """
 import json
 import re
@@ -21,20 +21,20 @@ OLLAMA_TAGS = "http://localhost:11434/api/tags"
 OLLAMA_MODEL = "llama3.2:1b"   # tuned for a 4-core Ryzen 5 7520U laptop (no usable GPU)
 CPU_THREADS = 4                # = your real CPU cores. More threads makes it SLOWER
 CONTEXT_TOKENS = 2048          # smaller memory window = faster and lighter on RAM
-TIMEOUT_SECONDS = 35           # HEX gives up and says so after this long
+TIMEOUT_SECONDS = 35           # Octo gives up and says so after this long
 KEEP_LOADED = "30m"            # keep the model in memory so replies start fast
 PLAN_TOKENS = 250              # cap for task plans
 CHAT_TOKENS = 60               # cap for chat answers (about two short sentences)
 HISTORY_MESSAGES = 4
 # -----------------------------------------------------------------------------
 
-# Words that suggest the owner wants HEX to DO something on the laptop.
+# Words that suggest the owner wants Octo to DO something on the laptop.
 TASK_WORDS = re.compile(
     r"\b(open|launch|start|create|make|add|delete|remove|move|rename|copy|save|write|"
     r"note|lock|list|show|run|folder|file|website|app|search|play|close|download|volume|"
     r"brightness|mute|screenshot|battery|quit|exit)\b", re.I)
 
-PLAN_SYSTEM = """You are HEX, a voice assistant on the owner's laptop. Be brief. No markdown.
+PLAN_SYSTEM = """You are Octo, a voice assistant on the owner's laptop. Be brief. No markdown.
 Reply ONLY with JSON: {"say": "", "advice": "", "plan": null}
 - Tasks: plan = {"goal": "...", "steps": [{"action": "...", "args": {}, "explain": "one short sentence"}]}
 - Allowed actions: open_app(name), close_app(name), open_website(url), list_folder(path),
@@ -46,7 +46,7 @@ Reply ONLY with JSON: {"say": "", "advice": "", "plan": null}
 - If the owner is mistaken, add a short correction in "advice" but still plan the task.
 - If you cannot do it, say so in "say". Never claim success you did not achieve."""
 
-CHAT_SYSTEM = ("You are HEX, a calm, confident voice assistant. Answer in at most two short "
+CHAT_SYSTEM = ("You are Octo, a calm, confident voice assistant. Answer in at most two short "
                "sentences. No markdown, no lists. If asked to do something on the laptop that "
                "you cannot do, say so briefly.")
 
@@ -85,7 +85,7 @@ def _chat(messages, want_json, max_tokens):
 
 
 def warm_up():
-    """Load the model into memory in the background while HEX starts up."""
+    """Load the model into memory in the background while Octo starts up."""
     try:
         _chat([{"role": "user", "content": "hi"}], want_json=False, max_tokens=1)
     except Exception:
@@ -93,7 +93,7 @@ def warm_up():
 
 
 def _clean_plan(plan):
-    """Drop any step the model invented that HEX cannot actually do."""
+    """Drop any step the model invented that Octo cannot actually do."""
     if not isinstance(plan, dict):
         return None
     steps = []
@@ -116,7 +116,7 @@ def think(text, history, mode="command"):
         if mode == "explain":
             return _chat([
                 {"role": "system", "content":
-                 "You are HEX. Explain in very simple words. Short sentences. No markdown."},
+                 "You are Octo. Explain in very simple words. Short sentences. No markdown."},
                 {"role": "user", "content": text}], want_json=False, max_tokens=150)
 
         # 1. instant: known commands and simple questions

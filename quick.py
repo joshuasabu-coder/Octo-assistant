@@ -4,12 +4,13 @@ Common requests are understood here, in a fraction of a second, without asking
 the slow AI model. Anything not matched here goes to the AI model.
 Add your own patterns inside match() or answer().
 """
+import difflib
 import os
 import re
 from datetime import datetime
 from urllib.parse import quote_plus
 
-from actions import SETTINGS_PAGES
+from actions import APP_ALIASES, SETTINGS_PAGES
 
 SITES = {
     "youtube": "youtube.com", "google": "google.com", "gmail": "mail.google.com",
@@ -29,16 +30,46 @@ FOLDERS = {"desktop": "~/Desktop", "documents": "~/Documents", "downloads": "~/D
 
 _FILLER = re.compile(
     r"\b(please|kindly|can you|could you|would you|will you|i want you to|i need you to|"
-    r"i would like you to|for me|hex)\b[,]?", re.I)
+    r"i would like you to|for me|octo|otto|hex)\b[,]?", re.I)
 
 
 def _normalize(text):
     t = text.strip()
-    t = re.sub(r"^(hey|hi|ok|okay)?\s*(hex|hecks|hacks)[,.\s]+", "", t, flags=re.I)
+    t = re.sub(r"^(hey|hi|ok|okay)?\s*(octo|otto|octa|okto|hex|hecks|hacks)[,.\s]+", "", t, flags=re.I)
     t = _FILLER.sub(" ", t)
     t = re.sub(r"[,!?]+", " ", t)
     t = re.sub(r"\.+(?=\s|$)", " ", t)      # drop sentence dots but keep example.com
-    return re.sub(r"\s+", " ", t).strip()
+    return _fix_verb(re.sub(r"\s+", " ", t).strip())
+
+
+# Speech recognition often mishears the first word ("on" for "open"). Fix the usual ones.
+VERB_FIX = {"on": "open", "own": "open", "oh": "open", "owen": "open", "oven": "open",
+            "opin": "open", "opan": "open", "opened": "open", "opening": "open", "upon": "open",
+            "clothes": "close", "closed": "close", "lunch": "launch", "launched": "launch"}
+
+
+def _fix_verb(t):
+    parts = t.split(" ", 1)
+    if len(parts) == 2 and parts[0].lower() in VERB_FIX:
+        return VERB_FIX[parts[0].lower()] + " " + parts[1]
+    return t
+
+
+def _snap(target):
+    """Turn a misheard name ("hold tube", "you too") into the real one ("youtube")."""
+    t = target.strip().lower()
+    if t in SITES or t in APP_ALIASES:
+        return t
+    sq = t.replace(" ", "")
+    if sq in ("youtoo", "utube", "yutube", "youtub", "youtu", "yutub") or \
+            (len(sq) >= 6 and sq.endswith("tube") and len(sq) <= 10):
+        return "youtube"
+    cands = {k.replace(" ", ""): k for k in list(SITES) + list(APP_ALIASES)}
+    if len(sq) >= 4:
+        for hit in difflib.get_close_matches(sq, list(cands), n=3, cutoff=0.85):
+            if abs(len(hit) - len(sq)) <= 2:
+                return cands[hit]
+    return t
 
 
 def _plan(goal, action, args, explain):
@@ -57,7 +88,7 @@ def answer(text):
                     r"today's date|the date)(?: today)?", t):
         return f"Today is {now:%A}, {now:%B} {now.day}."
     if re.fullmatch(r"(?:what(?:'s| is) your name|who are you)", t):
-        return "I am HEX, your personal assistant. I only obey your voice."
+        return "I am Octo, your personal assistant. I only obey your voice."
     if re.fullmatch(r"how are you(?: doing| today)?", t):
         return "All systems are running well. How can I help?"
     if re.fullmatch(r"(?:hello|hi|hey)(?: there)?|good (?:morning|afternoon|evening)", t):
@@ -207,21 +238,21 @@ def match(text):
     # close an app
     m = re.fullmatch(r"(?:close|quit|exit|kill|shut)(?: down)?(?: the)? (.+?)(?: app| application| window)?", low)
     if m and m.group(1) not in ("laptop", "computer", "pc", "system", "screen", "door"):
-        name = m.group(1).strip()
+        name = _snap(m.group(1).strip())
         return one(f"close {name}", "close_app", {"name": name}, f"I will close {name}.")
 
     # ----------------------------------------------------- open a website or an app
     m = re.fullmatch(r"(?:open|launch|start|run|go to)(?: the)? (.+)", t, re.I)
     if m:
-        target = re.sub(r"\s+(website|site|app|application|page)$", "",
-                        m.group(1).strip().lower())
+        target = _snap(re.sub(r"\s+(website|site|app|application|page)$", "",
+                              m.group(1).strip().lower()))
         if target in SITES:
             return _plan(f"open {target}", "open_website", {"url": SITES[target]},
                          f"I will open {target} in your web browser.")
         if re.fullmatch(r"[\w\-]+(\.[\w\-]+)+", target):
             return _plan(f"open {target}", "open_website", {"url": target},
                          f"I will open {target} in your web browser.")
-        # any other name: HEX looks for it in the Start menu (Spotify, WhatsApp, VS Code...)
+        # any other name: Octo looks for it in the Start menu (Spotify, WhatsApp, VS Code...)
         if target and not re.search(r"\b(folder|file|document|note|command)\b", target) \
                 and len(target.split()) <= 4:
             return _plan(f"open {target}", "open_app", {"name": target},

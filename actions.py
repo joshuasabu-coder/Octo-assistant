@@ -1,8 +1,8 @@
-"""Things HEX can actually do on the laptop. Add more here.
+"""Things Octo can actually do on the laptop. Add more here.
 
-Every action returns a short sentence that HEX reads out. Actions that can lose
+Every action returns a short sentence that Octo reads out. Actions that can lose
 work (shut down, restart, sleep, run a command, delete, move) are listed in
-DESTRUCTIVE: HEX asks for a second, spoken YES even after you approved the plan.
+DESTRUCTIVE: Octo asks for a second, spoken YES even after you approved the plan.
 """
 import ctypes
 import difflib
@@ -145,7 +145,7 @@ def open_app(name):
     return f"Opened {name}."
 
 
-# Never closed by voice: Windows itself, and HEX / his brain.
+# Never closed by voice: Windows itself, and Octo / his brain.
 PROTECTED = {"explorer", "svchost", "winlogon", "csrss", "lsass", "system", "dwm", "services",
              "python", "pythonw", "ollama", "ollama app", "msedgewebview2", "powershell"}
 
@@ -231,7 +231,7 @@ def change_brightness(delta):
 
 
 def screenshot():
-    folder = Path.home() / "Pictures" / "HEX Screenshots"
+    folder = Path.home() / "Pictures" / "Octo Screenshots"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"screenshot_{datetime.now():%Y%m%d_%H%M%S}.png"
     _powershell("Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
@@ -240,7 +240,7 @@ def screenshot():
                 "$g=[System.Drawing.Graphics]::FromImage($bmp); "
                 "$g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); "
                 f"$bmp.Save('{path}')")
-    return f"Screenshot saved in Pictures, HEX Screenshots, as {path.name}."
+    return f"Screenshot saved in Pictures, Octo Screenshots, as {path.name}."
 
 
 def lock_screen():
@@ -329,7 +329,7 @@ def delete_file(path):
     trash = Path(config.DATA_DIR) / "trash"
     trash.mkdir(parents=True, exist_ok=True)
     shutil.move(str(p), str(trash / p.name))
-    return f"Moved {p.name} to HEX's recovery folder. Nothing was permanently erased."
+    return f"Moved {p.name} to Octo's recovery folder. Nothing was permanently erased."
 
 
 def open_website(url):
@@ -345,7 +345,7 @@ ACTIONS = {f.__name__: f for f in [
     set_brightness, change_brightness, screenshot, system_info, shutdown_pc, restart_pc,
     cancel_shutdown, sleep_pc, run_command]}
 
-# HEX double-checks these even after you approved the plan.
+# Octo double-checks these even after you approved the plan.
 DESTRUCTIVE = {"delete_file", "move_file", "shutdown_pc", "restart_pc", "sleep_pc", "run_command"}
 
 # The AI model may never plan these by itself: only a command you say clearly runs them.
@@ -353,7 +353,7 @@ LLM_BLOCKED = {"run_command", "shutdown_pc", "restart_pc", "sleep_pc"}
 
 
 def confirm_text(name, args):
-    """What HEX says before a risky step."""
+    """What Octo says before a risky step."""
     return {
         "shutdown_pc": "I am about to shut down your laptop. Unsaved work may be lost.",
         "restart_pc": "I am about to restart your laptop. Unsaved work may be lost.",

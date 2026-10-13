@@ -1,4 +1,4 @@
-"""Run this to test HEX's speakers and voice, step by step."""
+"""Run this to test Octo's speakers and voice, step by step."""
 import numpy as np
 import sounddevice as sd
 
@@ -19,6 +19,6 @@ print("\n=== TEST 2: plain Windows voice, no effects ===")
 v._speak_plain("This is the normal voice test.")
 input("Did you hear that? Press Enter to continue... ")
 
-print("\n=== TEST 3: the HEX voice ===")
-v.say("I am HEX. I am online, and I only obey my master.")
+print("\n=== TEST 3: the Octo voice ===")
+v.say("I am Octo. I am online, and I only obey my master.")
 print("\nDone. Tell me which tests you heard.")

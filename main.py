@@ -1,9 +1,9 @@
 """
-HEX - a personal, voice-only assistant that obeys only its owner's voice.
+Octo - a personal, voice-only assistant that obeys only its owner's voice.
 
 Run:
-    python enroll.py     # once: teaches HEX your voice
-    python main.py       # starts HEX
+    python enroll.py     # once: teaches Octo your voice
+    python main.py       # starts Octo
 """
 import os
 
@@ -14,6 +14,7 @@ import re
 import sys
 import threading
 import time
+from urllib.parse import parse_qs, urlparse
 import traceback
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
@@ -33,7 +34,7 @@ from hex_voice import HexVoice
 
 # ---- Settings you may change ------------------------------------------------
 SHOW_UI = True                  # open the live interface window
-IDLE_FIRST_SECONDS = 45         # silence before HEX asks "are you there?"
+IDLE_FIRST_SECONDS = 45         # silence before Octo asks "are you there?"
 IDLE_REPEAT_SECONDS = 120       # gap between further reminders (3 in total, then quiet)
 UNAUTHORISED_COOLDOWN = 8       # don't repeat "unauthorised" more often than this
 THINK_FEEDBACK_AFTER = 4        # say "One moment." if thinking takes longer than this
@@ -43,6 +44,11 @@ THREADS = 4                     # your real CPU cores
 SAMPLE_RATE = 16000
 STATE_FILE = Path(config.DATA_DIR) / "state.json"
 VOICEPRINT = Path(config.DATA_DIR) / "owner_voiceprint.npy"
+
+# Hints that make speech recognition spell your usual commands correctly.
+STT_PROMPT = ("Octo. Open YouTube. Open Chrome. Open Spotify. Open WhatsApp. Open Notepad. "
+              "Close Chrome. Search for. Play on YouTube. Volume up. Volume down. "
+              "Take a screenshot. What time is it.")
 
 IDLE_LINES = [
     "Master, are you there?",
@@ -86,6 +92,8 @@ class Ears:
         quiet, started = 0.0, False
         t0 = time.time()
         while time.time() - t0 < max_seconds:
+            if ui.typed_pending():                # something was typed: stop listening
+                break
             data, _ = self.stream.read(self.block)
             level = float(np.abs(data).mean())
             ui.level(level)
@@ -120,7 +128,15 @@ class Ears:
         'silence' (nothing heard), 'noise' (a sound, not speech),
         'unauthorised' (a voice that is not the owner), 'ok' (the owner spoke)."""
         ui.state("awaiting")
+        typed = ui.pop_typed()                    # typed in the HUD bar (answered by voice only)
+        if typed:
+            print(f"[OCTO] typed: {typed}")
+            return "ok", typed
         audio = self.record()
+        typed = ui.pop_typed()
+        if typed:
+            print(f"[OCTO] typed: {typed}")
+            return "ok", typed
         if audio is None:
             return "silence", None
 
@@ -132,7 +148,7 @@ class Ears:
         thr = config.VOICE_MATCH_THRESHOLD
         ui.update(voice_score=round(score, 2), threshold=thr)
         if score < thr:
-            print(f"[HEX] voice match {score:.2f} (needs {thr:.2f}) - not the owner")
+            print(f"[OCTO] voice match {score:.2f} (needs {thr:.2f}) - not the owner")
             ui.update(owner_status="unauthorised")
             return "unauthorised", None
         ui.update(owner_status="authorised")
@@ -140,10 +156,11 @@ class Ears:
         t1 = time.time()
         ui.state("transcribing")
         segs, _ = self.stt.transcribe(audio, language="en", vad_filter=True,
-                                      beam_size=1, without_timestamps=True,
+                                      beam_size=2, without_timestamps=True,
+                                      initial_prompt=STT_PROMPT,
                                       condition_on_previous_text=False)
         text = " ".join(s.text for s in segs).strip()
-        print(f"[HEX] voice match {score:.2f} | voice check {t1 - t0:.1f} s | "
+        print(f"[OCTO] voice match {score:.2f} | voice check {t1 - t0:.1f} s | "
               f"speech-to-text {time.time() - t1:.1f} s")
         return ("ok", text) if text else ("noise", None)
 
@@ -174,7 +191,7 @@ def normalize_yes_no(text):
 def greeting():
     h = datetime.now().hour
     part = "morning" if h < 12 else "afternoon" if h < 18 else "evening"
-    return f"Good {part}, {config.OWNER_TITLE}. HEX is online and listening only to you."
+    return f"Good {part}, {config.OWNER_TITLE}. Octo is online and listening only to you."
 
 
 _last_unauth = 0.0
@@ -247,7 +264,7 @@ def think_with_feedback(voice, heard, history):
         result = fut.result()          # the brain has its own hard time limit
     took = time.time() - t0
     route = result.get("route", "?")
-    print(f"[HEX] thinking took {took:.1f} s ({route})")
+    print(f"[OCTO] thinking took {took:.1f} s ({route})")
     ui.update(think_seconds=took, think_route=route)
     ui.log(f"Thought for {took:.1f}s via {route}")
     return result
@@ -270,11 +287,21 @@ def run_plan(voice, ears, state, plan):
                 plan["done"] += 1
                 save_state(state)
                 continue
+        url = str(step.get("args", {}).get("url", ""))
+        searching = name == "open_website" and any(k in url for k in ("/search", "results?"))
         try:
             ui.log(f"Running {name}")
+            if searching:                        # the HUD shows the 3D web network
+                qs = parse_qs(urlparse(url).query)
+                query = (qs.get("q") or qs.get("search_query") or [""])[0]
+                ui.update(searching=True, search_query=query)
             result = ACTIONS[name](**step.get("args", {}))
+            if searching:
+                time.sleep(3)                    # let the search animation play
+                ui.update(searching=False, search_query="")
             voice.say(f"Done. {result}" if result else "Done.")
         except Exception as e:  # report honestly, never hide failures
+            ui.update(searching=False, search_query="")
             ui.log(f"{name} failed: {e}", "warn")
             voice.say(f"That step failed. The error was: {e}. "
                       "Would you like me to try another way?")
@@ -289,11 +316,11 @@ def main():
     ui.start(open_window=SHOW_UI, owner_title="Master", model=OLLAMA_MODEL)
     ui.set_engine_probe(check_engine)
     ui.log("Loading speech models...")
-    # Load the thinking model in the background while the rest of HEX starts up.
+    # Load the thinking model in the background while the rest of Octo starts up.
     threading.Thread(target=warm_up, daemon=True).start()
 
     voice, ears, state = HexVoice(), Ears(), load_state()
-    ui.log("HEX is online")
+    ui.log("Octo is online")
     voice.say(greeting())
 
     ok, msg = check_engine()
@@ -333,7 +360,7 @@ def main():
             ui.log(heard, "you")
             low = heard.lower()
 
-            if any(p in low for p in ("goodbye hex", "shut down hex", "sleep hex")):
+            if re.search(r"\b(goodbye|bye|shut down|sleep)\s+(octo|otto|octa|okto)\b", low):
                 voice.say(f"Goodbye, {config.OWNER_TITLE}. I will remember where we are.")
                 save_state(state)
                 break
@@ -354,7 +381,7 @@ def main():
                                  {"role": "assistant", "content": json.dumps(result)}]
             state["history"] = state["history"][-20:]
 
-            # HEX may correct a mistake or advise - but the order still stands.
+            # Octo may correct a mistake or advise - but the order still stands.
             if result.get("advice"):
                 voice.say(result["advice"])
                 last_explanation = result["advice"]
@@ -377,7 +404,7 @@ def main():
             save_state(state)
             idle.touch()
 
-        except Exception as e:             # one bad moment must never freeze HEX
+        except Exception as e:             # one bad moment must never freeze Octo
             traceback.print_exc()
             ui.state("error")
             ui.log(f"Error: {e}", "warn")

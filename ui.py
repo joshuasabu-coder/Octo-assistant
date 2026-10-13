@@ -1,11 +1,15 @@
-"""HEX's live interface.
+"""Octo's live interface.
 
 Starts a tiny web server that only listens on THIS laptop (127.0.0.1) and shows
-HEX's live status in a window. The page is read-only: it can display things,
-but it can never give HEX a command. Only your voice can do that.
+Octo's live status in a window. The page is read-only: it can display things,
+but it cannot give Octo a command. The only way in besides your voice is the small
+type bar, and that is protected by a secret token that only this page knows, so
+other websites or programs cannot talk to Octo through it.
 """
 import json
 import os
+import queue
+import secrets
 import shutil
 import subprocess
 import sys
@@ -26,6 +30,7 @@ LABELS = {
     "verifying": "VERIFYING VOICE...",
     "transcribing": "UNDERSTANDING...",
     "thinking": "THINKING...",
+    "searching": "SEARCHING THE WEB...",
     "speaking": "SPEAKING...",
     "unauthorised": "UNAUTHORISED VOICE",
     "error": "ATTENTION NEEDED",
@@ -42,6 +47,19 @@ _state = {
 }
 _probe = None
 _url = None
+TOKEN = secrets.token_urlsafe(18)       # shown only to the page Octo itself serves
+_typed = queue.Queue()                  # messages typed into the HUD's type bar
+
+
+def pop_typed():
+    try:
+        return _typed.get_nowait()
+    except queue.Empty:
+        return None
+
+
+def typed_pending():
+    return not _typed.empty()
 
 
 # ---------------------------------------------------------------- state API
@@ -123,7 +141,8 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.split("?")[0] in ("/", "/index.html"):
             try:
-                self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+                page = PAGE.read_bytes().replace(b"__TOKEN__", TOKEN.encode())
+                self._send(200, page, "text/html; charset=utf-8")
             except OSError:
                 self._send(500, b"hex_ui.html is missing", "text/plain")
         elif self.path.startswith("/api/state"):
@@ -136,6 +155,35 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(204, b"", "image/x-icon")
         else:
             self._send(404, b"not found", "text/plain")
+
+
+def _post_ok(self):
+    """Only the Octo page itself, on this laptop, may post a message."""
+    port = self.server.server_address[1]
+    host_ok = self.headers.get("Host") in (f"127.0.0.1:{port}", f"localhost:{port}")
+    origin = self.headers.get("Origin")
+    origin_ok = origin is None or origin in (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
+    token_ok = secrets.compare_digest(self.headers.get("X-Octo-Token", ""), TOKEN)
+    return host_ok and origin_ok and token_ok
+
+
+def _do_post(self):
+    if self.path != "/api/say" or not _post_ok(self):
+        return self._send(403, b'{"ok":false}', "application/json")
+    try:
+        n = int(self.headers.get("Content-Length", "0"))
+        if n <= 0 or n > 4000:
+            raise ValueError
+        text = str(json.loads(self.rfile.read(n)).get("text", "")).strip()[:300]
+        if not text:
+            raise ValueError
+    except Exception:
+        return self._send(400, b'{"ok":false}', "application/json")
+    _typed.put(text)
+    self._send(200, b'{"ok":true}', "application/json")
+
+
+_Handler.do_POST = _do_post
 
 
 def _open_window(url):
@@ -151,7 +199,7 @@ def _open_window(url):
 
 
 def start(open_window=True, owner_title="MASTER", model=""):
-    """Start the interface. Never raises: if it cannot start, HEX still works."""
+    """Start the interface. Never raises: if it cannot start, Octo still works."""
     global _url
     update(owner_title=str(owner_title).upper(), model=model)
     for port in PORTS:
@@ -162,9 +210,9 @@ def start(open_window=True, owner_title="MASTER", model=""):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         threading.Thread(target=_stats_loop, daemon=True).start()
         _url = f"http://127.0.0.1:{port}"
-        print(f"[HEX] live interface: {_url}")
+        print(f"[OCTO] live interface: {_url}")
         if open_window:
             _open_window(_url)
         return _url
-    print("[HEX] could not start the live interface (all ports busy). Continuing without it.")
+    print("[OCTO] could not start the live interface (all ports busy). Continuing without it.")
     return None

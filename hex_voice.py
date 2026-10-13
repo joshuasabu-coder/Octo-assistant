@@ -1,11 +1,11 @@
-"""HEX's voice: a natural, calm male voice.
+"""Octo's voice: a natural, calm male voice.
 
 Preferred engine: Piper, a neural voice that runs on your laptop (no internet).
 It sounds like a real person, not a robot. It needs a one-time voice download
-(see the setup steps). If it is not set up, HEX falls back to Windows' built-in
+(see the setup steps). If it is not set up, Octo falls back to Windows' built-in
 voice so he is never silent.
 
-HEX starts speaking after the FIRST sentence is ready while the rest is still
+Octo starts speaking after the FIRST sentence is ready while the rest is still
 being prepared, so long answers begin sooner.
 """
 import io
@@ -90,10 +90,10 @@ class HexVoice:
             ui.update(voice_engine="WINDOWS SAPI")
             msg = ("Natural voice not set up yet, using the Windows voice. "
                    "See the setup steps to install the Piper voice.")
-            print("[HEX]", msg)
+            print("[OCTO]", msg)
             ui.log(msg, "warn")
         try:
-            print("[HEX] audio output device:", sd.query_devices(kind="output")["name"])
+            print("[OCTO] audio output device:", sd.query_devices(kind="output")["name"])
         except Exception:
             pass
 
@@ -105,9 +105,9 @@ class HexVoice:
         try:
             from piper import PiperVoice
             self.piper = PiperVoice.load(str(model))
-            print(f"[HEX] natural voice loaded: {PIPER_VOICE}")
+            print(f"[OCTO] natural voice loaded: {PIPER_VOICE}")
         except Exception as e:
-            print(f"[HEX] could not load the natural voice ({e}); using the Windows voice.")
+            print(f"[OCTO] could not load the natural voice ({e}); using the Windows voice.")
             self.piper = None
 
     def _load_sapi(self):
@@ -125,12 +125,12 @@ class HexVoice:
                     self.sapi_file.Voice = hit[1]
                     self.sapi_plain.Voice = hit[1]
                     if not self.piper:
-                        print("[HEX] Windows voice:", hit[0])
+                        print("[OCTO] Windows voice:", hit[0])
                     break
             self.sapi_file.Rate = SAPI_RATE
             self.sapi_plain.Rate = 0
         except Exception as e:
-            print(f"[HEX] Windows speech engine problem: {e}")
+            print(f"[OCTO] Windows speech engine problem: {e}")
             self.sapi_file = self.sapi_plain = None
 
     # ------------------------------------------------------------ speaking
@@ -178,10 +178,10 @@ class HexVoice:
             if self.sapi_plain:
                 self.sapi_plain.Speak(text)
         except Exception as e:
-            print(f"[HEX] even the plain voice failed: {e}")
+            print(f"[OCTO] even the plain voice failed: {e}")
 
     def say(self, text):
-        print(f"HEX: {text}")
+        print(f"Octo: {text}")
         ui.log(text, "hex")
         ui.state("speaking")
         try:
@@ -193,7 +193,7 @@ class HexVoice:
                 else:
                     raise RuntimeError("no engine")
             except Exception as e:               # never go silent
-                print(f"[HEX] voice problem ({e}); using the plain Windows voice.")
+                print(f"[OCTO] voice problem ({e}); using the plain Windows voice.")
                 ui.log(f"voice problem: {e}", "warn")
                 self._speak_plain(text)
         finally:
